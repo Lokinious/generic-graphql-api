@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  # MongoDB database
+  mongodb:
+    image: mongo:7.0
+    container_name: generic-graphql-api-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: generic-graphql-api
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - generic-graphql-api-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Micronaut GraphQL API
+  app:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name: generic-graphql-api-app
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - MICRONAUT_ENVIRONMENTS=docker
+      - MONGODB_URI=mongodb://mongodb:27017/generic-graphql-api
+      - SERVER_HOST=0.0.0.0
+      - JWT_SECRET=mySecretJWTKeyForDockerEnvironment
+      - LOG_LEVEL=INFO
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - generic-graphql-api-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+volumes:
+  mongodb_data:
+
+networks:
+  generic-graphql-api-network:
+    driver: bridge

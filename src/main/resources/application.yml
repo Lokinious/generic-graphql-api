@@ -1,0 +1,32 @@
+micronaut:
+  application:
+    name: generic-graphql-api
+  server:
+    port: ${PORT:8080}
+    host: ${SERVER_HOST:localhost}
+  security:
+    authentication: bearer
+    token:
+      jwt:
+        signatures:
+          secret:
+            generator:
+              secret: ${JWT_SECRET:pleaseChangeThisSecretForANewOne}
+  
+mongodb:
+  uri: ${MONGODB_URI:mongodb://localhost:27017/generic-graphql-api}
+
+graphql:
+  enabled: ${GRAPHQL_ENABLED:true}
+  path: /graphql
+  graphiql:
+    enabled: ${GRAPHIQL_ENABLED:true}
+    path: /graphiql
+
+endpoints:
+  health:
+    enabled: true
+    sensitive: false
+  info:
+    enabled: true
+    sensitive: false

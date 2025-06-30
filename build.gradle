@@ -1,0 +1,138 @@
+plugins {
+    id("com.github.johnrengelman.shadow") version "8.1.1"
+    id("io.micronaut.application") version "4.2.1"
+    id("io.micronaut.test-resources") version "4.2.1"
+}
+
+version = "0.1"
+group = "lokinious.graphql_api"
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // Micronaut Core
+    annotationProcessor("io.micronaut:micronaut-http-validation")
+    annotationProcessor("io.micronaut.serde:micronaut-serde-processor")
+    annotationProcessor("io.micronaut.data:micronaut-data-processor")
+    
+    implementation("io.micronaut:micronaut-http-client")
+    implementation("io.micronaut:micronaut-jackson-databind")
+    implementation("io.micronaut.reactor:micronaut-reactor")
+    implementation("io.micronaut.reactor:micronaut-reactor-http-client")
+    implementation("io.micronaut.serde:micronaut-serde-jackson")
+    
+    // Data
+    implementation("io.micronaut.data:micronaut-data-mongodb")
+    
+    // GraphQL
+    implementation("io.micronaut.graphql:micronaut-graphql")
+    implementation("com.graphql-java:graphql-java:21.3")
+    implementation("com.graphql-java:graphql-java-extended-scalars:21.0")
+    
+    // MongoDB
+    implementation("io.micronaut.mongodb:micronaut-mongo-reactive")
+    implementation("org.mongodb:mongodb-driver-reactivestreams")
+    
+    // Health
+    implementation("io.micronaut:micronaut-management")
+    
+    // Security
+    implementation("io.micronaut.security:micronaut-security")
+    implementation("io.micronaut.security:micronaut-security-jwt")
+    
+    // Runtime
+    runtimeOnly("ch.qos.logback:logback-classic")
+    runtimeOnly("org.yaml:snakeyaml")
+    
+    // Test
+    testImplementation("io.micronaut:micronaut-http-client")
+    testImplementation("io.micronaut.test:micronaut-test-junit5")
+    
+    // Optional: Remove these for now to avoid Docker dependency in basic tests
+    // testImplementation("org.testcontainers:junit-jupiter")
+    // testImplementation("org.testcontainers:mongodb")
+    // testImplementation("org.testcontainers:testcontainers")
+}
+
+application {
+    mainClass.set("lokinious.graphql_api.Application")
+}
+
+java {
+    sourceCompatibility = JavaVersion.toVersion("21")
+    targetCompatibility = JavaVersion.toVersion("21")
+}
+
+micronaut {
+    version("4.2.1")
+    runtime("netty")
+    testRuntime("junit5")
+    processing {
+        incremental(true)
+        annotations("lokinious.graphql_api.*")
+    }
+}
+
+// Custom Docker build task
+task buildDockerImage(type: Exec, dependsOn: 'shadowJar') {
+    group = 'docker'
+    description = 'Builds a Docker image for the application locally'
+    
+    def imageName = 'generic-graphql-api'
+    def imageTag = version
+    def fullImageName = "${imageName}:${imageTag}"
+    def latestImageName = "${imageName}:latest"
+    
+    commandLine 'docker', 'build', 
+                '-t', fullImageName,
+                '-t', latestImageName,
+                '.'
+    
+    doFirst {
+        println "🐳 Building Docker image: ${fullImageName}"
+        println "📦 Also tagging as: ${latestImageName}"
+    }
+    
+    doLast {
+        println "✅ Docker image built successfully!"
+        println "🚀 Run with: docker run -p 8080:8080 ${latestImageName}"
+        println "🔍 Image size: docker images ${imageName}"
+    }
+}
+
+// Docker push task (commented out - only keeping image locally)
+// task dockerPush(type: Exec, dependsOn: 'dockerBuild') {
+//     group = 'docker'
+//     description = 'Pushes the Docker image to a registry'
+//     
+//     def imageName = 'generic-graphql-api'
+//     def imageTag = version
+//     def fullImageName = "${imageName}:${imageTag}"
+//     
+//     commandLine 'docker', 'push', fullImageName
+//     
+//     doFirst {
+//         println "📤 Pushing Docker image: ${fullImageName}"
+//     }
+// }
+
+// Docker run task for quick testing
+task dockerRun(type: Exec, dependsOn: 'buildDockerImage') {
+    group = 'docker'
+    description = 'Builds and runs the Docker container'
+    
+    def imageName = 'generic-graphql-api:latest'
+    
+    commandLine 'docker', 'run', '--rm', 
+                '-p', '8080:8080',
+                '-e', 'MONGODB_URI=mongodb://host.docker.internal:27017/generic-graphql-api',
+                imageName
+    
+    doFirst {
+        println "🚀 Building and running Docker container..."
+        println "📍 Application will be available at http://localhost:8080"
+        println "🛑 Press Ctrl+C to stop the container"
+    }
+}

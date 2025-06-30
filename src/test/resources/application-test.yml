@@ -1,0 +1,18 @@
+micronaut:
+  application:
+    name: generic-graphql-api-test
+  server:
+    port: -1  # Random port for testing
+
+# Disable MongoDB completely for tests
+mongodb:
+  enabled: false
+
+# Disable GraphQL for basic tests
+graphql:
+  enabled: false
+
+logger:
+  levels:
+    com.example: DEBUG
+    root: WARN
